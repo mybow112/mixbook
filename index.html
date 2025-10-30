@@ -8,22 +8,19 @@
   :root{
     --bg:#f7f9fc; --panel:#ffffff; --ink:#0b1220; --muted:#5a6a85; --line:#d7dfec;
     --chip:#eef3ff; --pill:#f2f6ff; --hi:#e8f0ff; --accent:#2563eb; --card:#ffffff;
+    --c0:#2563eb; --c1:#16a34a; --c2:#db2777; --c3:#f59e0b; --c4:#7c3aed; --c5:#0ea5e9; --c6:#ef4444; --c7:#10b981;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0; background:var(--bg); color:var(--ink); font-family:ui-sans-serif,system-ui,Apple SD Gothic Neo,Segoe UI,Malgun Gothic,Arial,Helvetica,sans-serif;}
   header{border-bottom:1px solid var(--line); padding:14px 16px; background:var(--panel); position:sticky; top:0; z-index:10}
   h1{margin:0; font-size:28px; font-weight:900; letter-spacing:.2px}
-  .row{display:grid; grid-template-columns: minmax(220px, 1fr) auto auto auto auto; gap:10px; margin:10px 0}
+  .row{display:grid; grid-template-columns: 1fr auto auto auto auto; gap:10px; margin:10px 0}
   .input{border:2px solid var(--line); border-radius:12px; background:var(--panel); padding:10px}
   .input input{width:100%; font-size:18px; font-weight:800; color:var(--ink); background:transparent; border:0; outline:none}
   .btn{border:2px solid var(--line); border-radius:12px; background:var(--panel); color:var(--ink); padding:10px 12px; font-size:15px; font-weight:900; cursor:pointer}
   .btn:hover{background:var(--hi)}
   main{display:grid; grid-template-columns: 1.7fr 1.6fr; gap:14px; padding:12px; align-items:start}
-  @media (max-width: 980px) {
-    .row{grid-template-columns: 1fr; gap:8px}
-    main{grid-template-columns: 1fr; padding:8px}
-  }
   .panel{border:2px solid var(--line); border-radius:12px; padding:12px; background:var(--panel); box-shadow:0 2px 8px rgba(12,20,35,0.05)}
   .title{font-weight:900; font-size:18px; margin-bottom:6px}
   .subttl{font-weight:900; font-size:14px; margin:8px 0 6px; color:#2b3a63}
@@ -34,6 +31,15 @@
   .chip{background:var(--chip); border:1px solid var(--line); padding:6px 10px; border-radius:999px; font-weight:900; font-size:16px; cursor:pointer; user-select:none}
   .chip.small{font-size:14px; opacity:.95}
   .chip.disabled{cursor:default; pointer-events:none; opacity:1}
+  /* type color accents (text-only) */
+  .chip.t-짐{color:#8b5e3c}
+  .chip.t-메{color:#6b7280}
+  .chip.t-미{color:#7c3aed}
+  .chip.t-악{color:#b91c1c}
+  .chip.t-식{color:#16a34a}
+  .chip.t-곤{color:#f59e0b}
+  .chip.t-드{color:#ef4444}
+  .chip.t-새{color:#0ea5e9}
   .pill{padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:var(--pill); font-weight:900}
   .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; opacity:.8; margin-top:6px}
   .hint{font-size:12px; color:var(--muted); margin:4px 0}
@@ -44,45 +50,75 @@
   .node .name{font-weight:900}
   .options{display:flex; flex-direction:column; gap:8px; margin:8px 0}
   .opt{position:relative; border:2px solid var(--line); border-radius:12px; padding:16px 10px 10px 10px; background:#fbfdff}
+  .opt .formula{gap:6px}
+  .opt .choose{margin-top:6px}
   .opt .choose button{padding:6px 10px; font-weight:800; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer}
   .opt .choose button:hover{background:#f1f6ff}
   .opt .lbl, .summary .lbl{position:absolute; left:10px; top:-12px; background:#111827; color:#fff; padding:3px 10px; border-radius:999px; font-weight:900; font-size:12px; letter-spacing:0.2px; white-space:nowrap}
+  .opt .lbl b, .summary .lbl b{color:#fca5a5; font-weight:900}
   .chosen{position:relative; border:2px solid #111827; border-radius:12px; padding:16px 10px 10px 10px; background:#fff8f5; margin:6px 0}
+  .chosen .formula{gap:6px}
   .summary{position:relative; border:2px dashed #6b7280; border-radius:12px; padding:14px 12px; background:#f9fafb; margin:6px 0; font-weight:900}
   .toggle{position:absolute; right:10px; top:8px; font-size:12px; border:1px solid var(--line); background:#fff; border-radius:8px; padding:3px 8px; cursor:pointer}
   .collapsed .formula, .collapsed .choose{display:none}
   footer{margin:18px 16px; font-size:12px; color:#6b7280}
-  #calcResult { color:#111827; font-weight:900; background:#f9fafb; padding:8px 10px; border-radius:6px; display:inline-block }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-<script>
-// Decode gzip+base64 from #mixdata safely and keep it OUT of the DOM (protection)
-(function() {
-  function decode() {
-    try {
-      var el = document.getElementById('mixdata');
-      if (!el) return;
-      if (el.getAttribute('data-encoded') === '0') return;
-      var b64 = (el.textContent || '').replace(/\s+/g,'');
-      if (!b64) return setTimeout(decode, 30);
-      if (!window.pako) return setTimeout(decode, 30);
-      var raw = atob(b64);
-      var u8 = new Uint8Array(raw.length);
-      for (var i=0;i<raw.length;i++) u8[i] = raw.charCodeAt(i);
-      var txt = window.pako.inflate(u8, { to: 'string' });
-      window.MIX_DATA_RAW = txt;           // keep only in memory
-      el.textContent = '';                 // never expose raw in DOM
-      el.setAttribute('data-encoded','0');
-      document.dispatchEvent(new CustomEvent('mixdata:ready'));
-    } catch(e) {
-      console.error('mixdata decode error', e);
-      setTimeout(decode, 100);
-    }
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', decode);
-  else decode();
-})();
-</script>
+
+<!-- PATCH: high-contrast result color + table styles -->
+<style id="patch_mixlevel" data-patch="mix-level">
+/* 계산 결과 글자색만 진하게 (기존 로직/수식 무변경) */
+#calcResult{
+  color:#111827 !important;
+  font-weight:900 !important;
+}
+
+/* 심플 반응형 표 스타일 (충돌 최소화) */
+.table-wrap{margin-top:12px}
+.mix-table{
+  width:100%; border-collapse:separate; border-spacing:0; overflow:hidden;
+  border:1px solid #d7dfec; border-radius:12px; background:#fff
+}
+.mix-table thead th{
+  background:#eef2ff; color:#111827; font-weight:900; font-size:14px;
+  padding:12px 10px; text-align:center; border-bottom:1px solid #d7dfec
+}
+.mix-table tbody td{
+  padding:12px 10px; text-align:center; border-bottom:1px solid #edf2f7; font-weight:800
+}
+.mix-table tbody tr:hover{background:#f7fbff}
+.badge{display:inline-block; padding:4px 10px; border-radius:999px; font-weight:900; border:1px solid #d7dfec; background:#fbfdff}
+.badge.k{background:#111827; color:#fff; border-color:#111827}
+</style>
+
+<style>
+#calcResult {
+  color: #111827 !important;
+  font-weight: 900 !important;
+  background: #f9fafb !important;
+  padding: 8px 10px !important;
+  border-radius: 6px !important;
+  display: inline-block !important;
+}
+</style>
+
+<!-- PATCH: widen search input on desktop, keep mobile readable -->
+<style id="patch_search_width">
+/* Desktop: make the first grid column (search box) take more space */
+header .row{
+  grid-template-columns: minmax(320px, 1.4fr) auto auto auto auto !important;
+}
+header .row .input input{
+  width: 100% !important;
+}
+
+/* Mobile: stack controls; ensure input is clearly visible */
+@media (max-width: 900px){
+  header .row{ grid-template-columns: 1fr !important; gap: 8px !important; }
+  header .row .input{ padding: 12px !important; }
+  header .row .input input{ width: 100% !important; font-size: 16px !important; }
+}
+</style>
+
 </head>
 <body>
   <header>
@@ -113,11 +149,11 @@
     </aside>
   </main>
 
-  <footer>제작자: 메크섭 MyBow</footer>
+  <footer>
+    제작자: 메크섭 MyBow
+  </footer>
 
-  <!-- PROTECTED mixdata: stays compressed in DOM -->
-  <script id="mixdata" type="application/octet-stream" data-encoded="1">
-득코=비스코
+  <script id="mixdata" type="text/plain">득코=비스코
 득코=미스코
 득코=드라코
 득코=메탈코
@@ -2263,11 +2299,49 @@
 (드)불멸가루곤(6)+(곤)폭주비틀키스(6) 한정기간=(드)DK가루곤
 
 (식)폭주네펜데스(6)+(미)폭주에스텔라(6) 한정기간=(드)불멸가루곤킹
-  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
 
 <script>
-// App: build index after mixdata ready
-document.addEventListener('mixdata:ready', function() {
+(function(){
   const $ = (sel,el=document)=>el.querySelector(sel);
   const elQ = $('#q');
   const elResults = $('#results');
@@ -2283,34 +2357,43 @@ document.addEventListener('mixdata:ready', function() {
   function baseName(s){ return (s||'').replace(LIMIT_RE,'').replace(PAREN_RE,'').trim(); }
   function normName(s){ return baseName(s).replace(/\s+/g,'').toLowerCase(); }
   function headTag(s){ const m=(s||'').match(/^\((.)\)/); return m? m[1]:''; }
+  function addMapList(map, key, val){ if(!map.has(key)) map.set(key, []); map.get(key).push(val); }
 
-  const raw = (window.MIX_DATA_RAW||'').replace(/\r/g,'');
+  const raw = document.getElementById('mixdata').textContent.replace(/\r/g,'');
   const rawLines = raw.split(/\n+/);
   const lines = [];
   let acc = "";
-  for (let i=0;i<rawLines.length;i++){ let line = rawLines[i].trim(); if (!line) continue; acc += (acc? " " : "") + line; if (line.includes('=')){ lines.push(acc); acc=""; } }
+  for (let i=0;i<rawLines.length;i++){
+    let line = rawLines[i].trim();
+    if (!line) continue;
+    acc += (acc? " " : "") + line;
+    if (line.includes('=')){ lines.push(acc); acc=""; }
+  }
   if (acc) lines.push(acc);
 
   const recipesByResult = new Map();
   const recipesByComp = new Map();
   const acqByName = new Map();
 
-  function addMapList(map, key, val){ if(!map.has(key)) map.set(key, []); map.get(key).push(val); }
-
   function applyCorrections(entry){
     const combos = [
-      ['삐약몬','떡충'],['삐약몬','망울꽃'],['삐약몬','비이스'],['푸란','말콩'],
+      ['삐약몬','떡충'],
+      ['삐약몬','망울꽃'],
+      ['삐약몬','비이스'],
+      ['푸란','말콩'],
     ];
     const setEq = (a,b)=> a.length===b.length && a.every(v=>b.includes(v));
     const compsBN = entry.comps.map(c=>baseName(c));
-    const isTargetCombo = combos.some(pair=> setEq(compsBN.slice().sort(), pair.slice().sort()));
-    if(isTargetCombo && baseName(entry.result)==='링링') entry.result='(새)팅팅';
+    const isTargetCombo = combos.some(pair=> setEq(compsBN.sort(), pair.slice().sort()));
+    if(isTargetCombo && baseName(entry.result)==='링링'){
+      entry.result = '(새)팅팅';
+    }
     return entry;
   }
 
   lines.forEach((line)=>{
     if(!line.includes('=')) return;
-    line = line.replace(LIMIT_RE,'');
+    line = line.replace(LIMIT_RE,''); // strip '한정기간'
     line = line.replace(/,\s*(?==)/g,'').replace(/,+$/,'');
     let [lhs, rhs] = line.split('=');
     lhs = (lhs||'').trim(); rhs = (rhs||'').trim();
@@ -2323,14 +2406,17 @@ document.addEventListener('mixdata:ready', function() {
         if(comps.length<2) return;
         let entry = {comps, result: rhs, srcLine: line};
         entry = applyCorrections(entry);
-        const k = normName(entry.result);
-        addMapList(recipesByResult, k, entry);
-        comps.forEach(c=> addMapList(recipesByComp, normName(c), entry));
+        (recipesByResult.get(normName(entry.result))||recipesByResult.set(normName(entry.result),[]).get(normName(entry.result))).push(entry);
+        comps.forEach(c=>{
+          const key = normName(c);
+          (recipesByComp.get(key)||recipesByComp.set(key,[]).get(key)).push(entry);
+        });
       });
     } else {
       const where = lhs; const name = rhs;
       const entry = {where, name, srcLine: line};
-      addMapList(acqByName, normName(name), entry);
+      const key = normName(name);
+      (acqByName.get(key)||acqByName.set(key,[]).get(key)).push(entry);
     }
   });
 
@@ -2341,26 +2427,83 @@ document.addEventListener('mixdata:ready', function() {
     span.textContent = name;
     if(clickable){
       span.title = '클릭하면 이 몬스터로 재검색 (괄호 무시)';
-      span.addEventListener('click', ()=>{ elQ.value = baseName(name); doSearch(true); });
-    } else { span.classList.add('disabled'); }
+      span.addEventListener('click', ()=>{
+        elQ.value = baseName(name);
+        doSearch(true);
+      });
+    } else {
+      span.classList.add('disabled');
+      span.title = '트리에서는 클릭 비활성화';
+    }
     return span;
   }
-  function textPill(txt){ const s=document.createElement('span'); s.className='pill'; s.textContent=txt; return s; }
-  function rowFormula(parts){ const div=document.createElement('div'); div.className='res'; const f=document.createElement('div'); f.className='formula'; parts.forEach(p=>f.appendChild(p)); div.appendChild(f); return div; }
-  function subTitle(txt){ const d=document.createElement('div'); d.className='subttl'; d.textContent=txt; return d; }
+  function textPill(txt){
+    const s = document.createElement('span');
+    s.className = 'pill'; s.textContent = txt; return s;
+  }
+  function rowFormula(parts){
+    const div = document.createElement('div');
+    div.className = 'res';
+    const f = document.createElement('div');
+    f.className = 'formula';
+    parts.forEach(p=> f.appendChild(p));
+    div.appendChild(f);
+    return div;
+  }
+  function subTitle(txt){
+    const d = document.createElement('div');
+    d.className = 'subttl';
+    d.textContent = txt;
+    return d;
+  }
   function divider(){ const d=document.createElement('div'); d.className='divider'; return d; }
+  function toggleBtn(container){
+    const b = document.createElement('button');
+    b.className = 'toggle';
+    b.textContent = '접기';
+    b.addEventListener('click', ()=>{
+      const col = container.classList.toggle('collapsed');
+      b.textContent = col ? '펼치기' : '접기';
+    });
+    return b;
+  }
+  function childLabel(parentName, role, stageDepth){
+    const lbl = document.createElement('span');
+    lbl.className = 'pill';
+    lbl.textContent = `${baseName(parentName)} → ${role} (믹스${stageDepth}단)`;
+    lbl.style.background = '#eef6ff';
+    lbl.style.borderColor = '#cfe3ff';
+    lbl.style.color = '#0b1220';
+    return lbl;
+  }
 
+  // Search history
   const qHistory = [];
-  function pushHistory(v){ v=(v||'').trim(); if(!v) return; if(!qHistory.length || qHistory[qHistory.length-1]!==v) qHistory.push(v); }
+  function pushHistory(rawInput){
+    const v = (rawInput||'').trim();
+    if(!v) return;
+    if(!qHistory.length || qHistory[qHistory.length-1] !== v){
+      qHistory.push(v);
+    }
+  }
   function goBack(){
-    if(qHistory.length>1){ qHistory.pop(); elQ.value = qHistory[qHistory.length-1]; doSearch(false); }
-    else { elQ.value=''; elResults.innerHTML=''; }
+    if(qHistory.length > 1){
+      qHistory.pop();
+      const prev = qHistory[qHistory.length-1];
+      elQ.value = baseName(prev);
+      doSearch(false);
+    } else {
+      elQ.value = '';
+      elResults.innerHTML = '';
+      // DO NOT auto-clear tree here
+    }
   }
 
   function doSearch(shouldPush=true){
     const rawInput = (elQ.value||'');
     const q = normName(rawInput);
-    elResults.innerHTML='';
+    elResults.innerHTML = '';
+    // DO NOT clear elRoute (no auto reset)
     if(!q) return;
     if(shouldPush) pushHistory(rawInput);
 
@@ -2370,24 +2513,40 @@ document.addEventListener('mixdata:ready', function() {
 
     if(asResult.length){
       elResults.appendChild(subTitle('이걸 만드는 믹스법'));
-      asResult.forEach(rec=>{ const parts=[...rec.comps.map(c=>chip(c)), textPill('='), chip(rec.result)]; elResults.appendChild(rowFormula(parts)); });
+      asResult.forEach(rec=>{
+        const parts = [...rec.comps.map(c=>chip(c)), textPill('='), chip(rec.result)];
+        elResults.appendChild(rowFormula(parts));
+      });
       elResults.appendChild(divider());
     }
     if(acqs.length){
       elResults.appendChild(subTitle('득코 / 획득'));
-      acqs.forEach(a=>{ const left=document.createElement('span'); left.className='pill'; left.textContent=a.where+' ='; const parts=[left, chip(a.name)]; elResults.appendChild(rowFormula(parts)); });
+      acqs.forEach(a=>{
+        const left = document.createElement('span');
+        left.className = 'pill';
+        left.textContent = a.where + ' =';
+        const parts = [left, chip(a.name)];
+        elResults.appendChild(rowFormula(parts));
+      });
       elResults.appendChild(divider());
     }
     if(asComp.length){
       elResults.appendChild(subTitle('이 코어가 쓰이는 믹스법'));
-      asComp.forEach(rec=>{ const parts=[...rec.comps.map(c=>chip(c)), textPill('='), chip(rec.result)]; elResults.appendChild(rowFormula(parts)); });
+      asComp.forEach(rec=>{
+        const comps = rec.comps.map(c=>chip(c));
+        const parts = [...comps, textPill('='), chip(rec.result)];
+        elResults.appendChild(rowFormula(parts));
+      });
     }
     if(!asResult.length && !asComp.length && !acqs.length){
-      const empty=document.createElement('div'); empty.className='li'; empty.textContent='검색 결과가 없습니다. (이름 철자/공백/괄호 제거 확인)'; elResults.appendChild(empty);
+      const empty = document.createElement('div');
+      empty.className = 'li';
+      empty.textContent = '검색 결과가 없습니다. (이름 철자/공백/괄호 제거 확인)';
+      elResults.appendChild(empty);
     }
   }
 
-  // Tree (optional UI kept minimal, same as previous behavior)
+  // Tree
   let treeIdSeq = 0;
   function newNode(name, depth=1, meta={}){ return { id: ++treeIdSeq, name, chosen:null, children:[], leaf:false, depth, meta }; }
   function buildOptions(name){
@@ -2397,58 +2556,146 @@ document.addEventListener('mixdata:ready', function() {
     (acqByName.get(k)||[]).forEach(a=> opts.push({kind:'acq', acq:a}) );
     return opts;
   }
-  function toggleBtn(container){
-    const b=document.createElement('button'); b.className='toggle'; b.textContent='접기';
-    b.addEventListener('click',()=>{ const col=container.classList.toggle('collapsed'); b.textContent=col?'펼치기':'접기'; });
-    return b;
-  }
-  function baseChip(name){ return chip(name,'',false); }
-  function childLabel(parentName, role, stageDepth){
-    const lbl = document.createElement('span'); lbl.className='pill';
-    lbl.textContent = baseName(parentName)+' → '+role+' (믹스'+stageDepth+'단)'; lbl.style.background='#eef6ff'; lbl.style.borderColor='#cfe3ff'; return lbl;
-  }
+
   function renderNode(node, mount){
-    const wrap=document.createElement('div'); wrap.className='node tree';
-    const head=document.createElement('div'); head.className='head';
-    if(node.meta && node.meta.parentName && node.meta.role) head.appendChild(childLabel(node.meta.parentName, node.meta.role, node.meta.stageDepth));
-    head.appendChild(baseChip(node.name)); wrap.appendChild(head);
+    const wrap = document.createElement('div');
+    wrap.className = 'node tree';
+    const head = document.createElement('div');
+    head.className = 'head';
+    if(node.meta && node.meta.parentName && node.meta.role){
+      head.appendChild(childLabel(node.meta.parentName, node.meta.role, node.meta.stageDepth));
+    }
+    head.appendChild(chip(node.name, '', false));
+    wrap.appendChild(head);
+
+    if(node.depth===1 && node.chosen){
+      const sum = document.createElement('div');
+      sum.className = 'summary';
+      const lbl = document.createElement('div');
+      lbl.className = 'lbl';
+      lbl.textContent = '루트 요약';
+      sum.appendChild(lbl);
+      const txt = document.createElement('div');
+      txt.textContent = `${baseName(node.name)} 믹스 루트 선택 완료`;
+      sum.appendChild(txt);
+      sum.appendChild(toggleBtn(sum));
+      wrap.appendChild(sum);
+    }
+
     if(!node.leaf && !node.chosen){
-      const opts=buildOptions(node.name);
+      const opts = buildOptions(node.name);
       if(opts.length){
-        const optWrap=document.createElement('div'); optWrap.className='options';
-        opts.forEach((o,idx)=>{
-          const box=document.createElement('div'); box.className='opt';
-          const lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=baseName(node.name)+' 선택루트 '+(idx+1);
-          box.appendChild(lbl); box.appendChild(toggleBtn(box));
-          const f=document.createElement('div'); f.className='formula';
-          if(o.kind==='recipe'){ o.rec.comps.forEach(c=>f.appendChild(baseChip(c))); f.appendChild(textPill('=')); f.appendChild(baseChip(o.rec.result)); }
-          else { const pill=document.createElement('span'); pill.className='pill'; pill.textContent=o.acq.where+' ='; f.appendChild(pill); f.appendChild(baseChip(o.acq.name)); }
-          box.appendChild(f);
-          const act=document.createElement('div'); act.className='choose';
-          const btn=document.createElement('button'); btn.textContent='이 경로 선택';
-          btn.addEventListener('click',()=>{
-            node.chosen=o;
+        const optWrap = document.createElement('div');
+        optWrap.className = 'options';
+        opts.forEach((o, idx)=>{
+          const box = document.createElement('div');
+          box.className = 'opt opt-c'+(idx%8);
+
+          const lbl = document.createElement('div');
+          lbl.className = 'lbl';
+          const nodeBase = baseName(node.name);
+          lbl.textContent = `${nodeBase} 선택루트 ${idx+1}`;
+          box.appendChild(lbl);
+          box.appendChild(toggleBtn(box));
+
+          if(o.kind==='recipe'){
+            const f = document.createElement('div');
+            f.className = 'formula';
+            o.rec.comps.forEach(c=> f.appendChild(chip(c,'', false)) );
+            f.appendChild(textPill('='));
+            f.appendChild(chip(o.rec.result,'', false));
+            box.appendChild(f);
+          } else {
+            const f = document.createElement('div');
+            f.className = 'formula';
+            const pill = document.createElement('span');
+            pill.className = 'pill';
+            pill.textContent = o.acq.where + ' =';
+            f.appendChild(pill);
+            f.appendChild(chip(o.acq.name,'', false));
+            box.appendChild(f);
+          }
+
+          const act = document.createElement('div');
+          act.className = 'choose';
+          const btn = document.createElement('button');
+          btn.textContent = '이 경로 선택';
+          btn.addEventListener('click', ()=>{
+            node.chosen = o;
             if(o.kind==='recipe'){
-              const comps=o.rec.comps.map(c=>baseName(c)); node.children=[];
-              if(comps[0]) node.children.push(newNode(comps[0], node.depth+1, {parentName: baseName(node.name), role:'메인 코어', stageDepth: node.depth}));
-              if(comps[1]) node.children.push(newNode(comps[1], node.depth+1, {parentName: baseName(node.name), role:'서브 코어', stageDepth: node.depth}));
-            } else { node.leaf=true; }
+              const comps = o.rec.comps.map(c=>baseName(c));
+              const main = comps[0]||'';
+              const sub = comps[1]||'';
+              node.children = [];
+              if(main) node.children.push(newNode(main, node.depth+1, {parentName: baseName(node.name), role:'메인 코어', stageDepth: node.depth}));
+              if(sub) node.children.push(newNode(sub, node.depth+1, {parentName: baseName(node.name), role:'서브 코어', stageDepth: node.depth}));
+            } else {
+              node.leaf = true;
+            }
             mount.replaceChild(renderNode(node, mount), wrap);
           });
-          act.appendChild(btn); box.appendChild(act); optWrap.appendChild(box);
+          act.appendChild(btn);
+          box.appendChild(act);
+
+          optWrap.appendChild(box);
         });
         wrap.appendChild(optWrap);
-      } else { const info=document.createElement('div'); info.className='li'; info.textContent='선택 가능한 레시피/득코가 없습니다.'; wrap.appendChild(info); }
+      } else {
+        const info = document.createElement('div');
+        info.className = 'li';
+        info.textContent = '선택 가능한 레시피/득코가 없습니다.';
+        wrap.appendChild(info);
+      }
     }
-    if(node.chosen && node.children.length) node.children.forEach(child=> wrap.appendChild(renderNode(child, wrap)));
+
+    if(node.chosen){
+      const sum = document.createElement('div');
+      sum.className = 'chosen';
+      sum.appendChild(toggleBtn(sum));
+
+      const f = document.createElement('div');
+      f.className = 'formula';
+      if(node.chosen.kind==='recipe'){
+        node.chosen.rec.comps.forEach(c=> f.appendChild(chip(c,'', false)));
+        f.appendChild(textPill('='));
+        f.appendChild(chip(node.chosen.rec.result,'', false));
+      } else {
+        const pill = document.createElement('span');
+        pill.className = 'pill';
+        pill.textContent = node.chosen.acq.where + ' =';
+        f.appendChild(pill);
+        f.appendChild(chip(node.chosen.acq.name,'', false));
+      }
+      sum.appendChild(f);
+      wrap.appendChild(sum);
+    }
+
+    if(node.chosen && node.children.length){
+      node.children.forEach(child=>{ wrap.appendChild(renderNode(child, wrap)); });
+      const rechoose = document.createElement('div');
+      rechoose.style.marginTop = '6px';
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = '이 노드 경로 다시 선택';
+      btn.addEventListener('click', ()=>{
+        node.chosen = null; node.children = []; node.leaf = false;
+        mount.replaceChild(renderNode(node, mount), wrap);
+      });
+      rechoose.appendChild(btn);
+      wrap.appendChild(rechoose);
+    }
     return wrap;
   }
   function startTree(){
     const qName = (elQ.value||'').trim();
-    if(!qName) return alert('먼저 검색어(몬스터 이름)를 입력하세요.');
-    elRoute.innerHTML=''; const root=newNode(baseName(qName),1); elRoute.appendChild(renderNode(root, elRoute));
+    if(!qName){ alert('먼저 검색어(몬스터 이름)를 입력하세요.'); return; }
+    elRoute.innerHTML = ''; // Only clear when user explicitly builds a tree
+    const root = newNode(baseName(qName), 1);
+    elRoute.appendChild(renderNode(root, elRoute));
   }
-  function resetTree(){ elRoute.innerHTML=''; }
+  function resetTree(){
+    elRoute.innerHTML = '';
+  }
 
   document.getElementById('search').addEventListener('click', ()=>doSearch(true));
   document.getElementById('buildTree').addEventListener('click', startTree);
@@ -2456,38 +2703,89 @@ document.addEventListener('mixdata:ready', function() {
   document.getElementById('back').addEventListener('click', goBack);
   elQ.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(true); });
   setTimeout(()=> elQ.focus(), 0);
-});
+})();
 </script>
 
-<!-- 계산기 -->
+<!-- === FINAL SIMPLE CALCULATOR START === -->
 <section style="margin:16px; padding:14px; border-radius:12px;">
   <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center; font-size:1.05rem;">
-    <input id="baseA" type="number" placeholder="기본렙 A" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:1px solid #d7dfec;">
-    <input id="currA" type="number" placeholder="현재렙 A" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:1px solid #d7dfec;">
+    <input id="baseA" type="number" placeholder="기본렙 A" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:none;">
+    <input id="currA" type="number" placeholder="현재렙 A" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:none;">
     <span> + </span>
-    <input id="baseB" type="number" placeholder="기본렙 B" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:1px solid #d7dfec;">
-    <input id="currB" type="number" placeholder="현재렙 B" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:1px solid #d7dfec;">
+    <input id="baseB" type="number" placeholder="기본렙 B" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:none;">
+    <input id="currB" type="number" placeholder="현재렙 B" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:none;">
     <span> = </span>
     <button id="calcBtn" class="btn" style="padding:8px 14px; border-radius:10px;">계산하기</button>
   </div>
-  <div id="resultBox" style="text-align:center; margin-top:10px; font-size:1.2rem;">결과: -</div>
+  <div id="resultBox" style="text-align:center; margin-top:10px; font-size:1.3rem;">결과: -</div>
 </section>
+
 <script>
 (function(){
+  const $ = s => document.querySelector(s);
   function calc(){
-    const g = id => parseFloat(document.getElementById(id).value);
-    const baseA=g('baseA'), currA=g('currA'), baseB=g('baseB'), currB=g('currB');
-    const out=document.getElementById('resultBox');
-    if([baseA,currA,baseB,currB].some(v=>Number.isNaN(v))){ out.textContent='결과: 입력 부족'; return; }
-    let add=8; const a15=currA>=(baseA+15), b15=currB>=(baseB+15), a25=currA>=(baseA+25), b25=currB>=(baseB+25);
-    if(a25&&b25) add=10; else if(a15||b15) add=9;
-    const exact=(currA+currB)/2 + add;
+    const baseA = parseFloat($('#baseA').value);
+    const currA = parseFloat($('#currA').value);
+    const baseB = parseFloat($('#baseB').value);
+    const currB = parseFloat($('#currB').value);
+    const out = $('#resultBox');
+    if([baseA, currA, baseB, currB].some(v => Number.isNaN(v))){
+      out.style.color = '#111827'; out.style.fontWeight='900';
+      out.textContent = '결과: 입력 부족';
+      return;
+    }
+    // 보정값: +10 (양쪽 기렙+25 이상) > +9 (한쪽 기렙+15 이상) > +8
+    let add = 8;
+    const a15 = currA >= (baseA + 15);
+    const b15 = currB >= (baseB + 15);
+    const a25 = currA >= (baseA + 25);
+    const b25 = currB >= (baseB + 25);
+    if(a25 && b25) add = 10;
+    else if(a15 || b15) add = 9;
+
+    const exact = (currA + currB)/2 + add;
+
     const isHalf = Math.abs(exact - Math.round(exact)) === 0.5;
-    out.innerHTML = isHalf ? '결과: <b>'+exact.toFixed(1)+'</b> (⚠️ 변동 가능)' : '결과: <b>'+Math.round(exact)+'</b> (안정빵)';
+    if(isHalf){
+      out.style.color = '#ff5a5a';
+      out.innerHTML = '결과: <b>' + exact.toFixed(1) + '</b> (⚠️ 변동 가능)';
+    }else{
+      out.style.color = '#111827'; out.style.fontWeight='900';
+      out.innerHTML = '결과: <b>' + Math.round(exact) + '</b> (안정빵)';
+    }
   }
-  document.getElementById('calcBtn').addEventListener('click', calc);
+  const btn = document.querySelector('#calcBtn');
+  if(btn) btn.addEventListener('click', calc);
 })();
 </script>
+<!-- === FINAL SIMPLE CALCULATOR END === -->
+
+<!-- PATCH: 믹스 마스터율 표 (이미지 대체, 텍스트 표) -->
+<div class="title" style="margin-top:10px">믹스 마스터율 표</div>
+<div class="table-wrap">
+  <table class="mix-table" aria-label="믹스 마스터율 표">
+    <thead>
+      <tr>
+        <th>믹스 단계</th>
+        <th>기본 레벨 적용 범위</th>
+        <th>마스터 요구 수치</th>
+        <th>최종 마스터 요구 수치</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge">믹스 레벨 1</span></td><td>1~20</td><td><span class="badge">30회</span></td><td><span class="badge k">30회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 2</span></td><td>21~40</td><td><span class="badge">55회</span></td><td><span class="badge k">55회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 3</span></td><td>41~60</td><td><span class="badge">60회</span></td><td><span class="badge k">88회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 4</span></td><td>61~80</td><td><span class="badge">75회</span></td><td><span class="badge k">82회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 5</span></td><td>81~100</td><td><span class="badge">88회</span></td><td><span class="badge k">188회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 6</span></td><td>101~120</td><td><span class="badge">105회</span></td><td><span class="badge k">149회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 7</span></td><td>121~140</td><td><span class="badge">78회</span></td><td><span class="badge k">113회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 8</span></td><td>141~160</td><td><span class="badge">82회</span></td><td><span class="badge k">116회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 9</span></td><td>161~180</td><td><span class="badge">86회</span></td><td><span class="badge k">97회</span></td></tr>
+      <tr><td><span class="badge">믹스 레벨 10</span></td><td>180~</td><td><span class="badge">82회</span></td><td><span class="badge k">98회</span></td></tr>
+    </tbody>
+  </table>
+</div>
 
 </body>
 </html>
