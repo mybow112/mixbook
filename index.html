@@ -124,7 +124,7 @@ header .row .input input{
   <header>
     <h1>믹스도감</h1>
     <div class="row">
-      <div class="input"><input id="q" placeholder="검색할 몬스터 이름 (괄호 없이: 예) 뉴프로즌화뿔소, 드라칸, 네오오르데빌 …)" /></div>
+      <div class="input"><input id="q" placeholder="검색할 코어 이름 (괄호 없이: 예) 뉴프로즌화뿔소, 드라칸, 네오오르데빌 …)" /></div>
       <button id="search" class="btn">검색</button>
       <button id="back" class="btn">뒤로가기</button>
       <button id="buildTree" class="btn">믹스 트리 생성</button>
@@ -135,7 +135,7 @@ header .row .input input{
   <main>
     <section class="panel">
       <div class="title">믹스 공식 출력</div>
-      <div class="hint">좌측은 ‘믹스법(레시피) + 득코(획득)’ 전용입니다. 칩(몬스터명)을 클릭하면 그 몬스터로 재검색됩니다. Enter로도 검색 가능.</div>
+      <div class="hint">좌측은 ‘믹스법(레시피) + 득코(획득)’ 전용입니다. 칩(코어명)을 클릭하면 그 코어로 재검색됩니다. Enter로도 검색 가능.</div>
       <div id="results" class="res-list"></div>
     </section>
 
@@ -261,7 +261,7 @@ header .row .input input{
     span.className = 'chip small' + (tag?(' t-'+tag):'') + (extraClass?(' '+extraClass):'');
     span.textContent = name;
     if(clickable){
-      span.title = '클릭하면 이 몬스터로 재검색 (괄호 무시)';
+      span.title = '클릭하면 이 코어로 재검색 (괄호 무시)';
       span.addEventListener('click', ()=>{
         elQ.value = baseName(name);
         doSearch(true);
@@ -523,7 +523,7 @@ header .row .input input{
   }
   function startTree(){
     const qName = (elQ.value||'').trim();
-    if(!qName){ alert('먼저 검색어(몬스터 이름)를 입력하세요.'); return; }
+    if(!qName){ alert('먼저 검색어(코어 이름)를 입력하세요.'); return; }
     elRoute.innerHTML = ''; // Only clear when user explicitly builds a tree
     const root = newNode(baseName(qName), 1);
     elRoute.appendChild(renderNode(root, elRoute));
