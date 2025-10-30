@@ -14,12 +14,16 @@
   body{margin:0; background:var(--bg); color:var(--ink); font-family:ui-sans-serif,system-ui,Apple SD Gothic Neo,Segoe UI,Malgun Gothic,Arial,Helvetica,sans-serif;}
   header{border-bottom:1px solid var(--line); padding:14px 16px; background:var(--panel); position:sticky; top:0; z-index:10}
   h1{margin:0; font-size:28px; font-weight:900; letter-spacing:.2px}
-  .row{display:grid; grid-template-columns: 1fr auto auto auto auto; gap:10px; margin:10px 0}
+  .row{display:grid; grid-template-columns: minmax(220px, 1fr) auto auto auto auto; gap:10px; margin:10px 0}
   .input{border:2px solid var(--line); border-radius:12px; background:var(--panel); padding:10px}
   .input input{width:100%; font-size:18px; font-weight:800; color:var(--ink); background:transparent; border:0; outline:none}
   .btn{border:2px solid var(--line); border-radius:12px; background:var(--panel); color:var(--ink); padding:10px 12px; font-size:15px; font-weight:900; cursor:pointer}
   .btn:hover{background:var(--hi)}
   main{display:grid; grid-template-columns: 1.7fr 1.6fr; gap:14px; padding:12px; align-items:start}
+  @media (max-width: 980px) {
+    .row{grid-template-columns: 1fr; gap:8px}
+    main{grid-template-columns: 1fr; padding:8px}
+  }
   .panel{border:2px solid var(--line); border-radius:12px; padding:12px; background:var(--panel); box-shadow:0 2px 8px rgba(12,20,35,0.05)}
   .title{font-weight:900; font-size:18px; margin-bottom:6px}
   .subttl{font-weight:900; font-size:14px; margin:8px 0 6px; color:#2b3a63}
@@ -31,6 +35,7 @@
   .chip.small{font-size:14px; opacity:.95}
   .chip.disabled{cursor:default; pointer-events:none; opacity:1}
   .pill{padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:var(--pill); font-weight:900}
+  .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; opacity:.8; margin-top:6px}
   .hint{font-size:12px; color:var(--muted); margin:4px 0}
   textarea{width:100%; min-height:160px; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:10px; font-size:14px}
   .tree{--pad:18px; padding-left:var(--pad); border-left:2px dashed #c9d6f3; margin:6px 0 6px 0}
@@ -39,7 +44,6 @@
   .node .name{font-weight:900}
   .options{display:flex; flex-direction:column; gap:8px; margin:8px 0}
   .opt{position:relative; border:2px solid var(--line); border-radius:12px; padding:16px 10px 10px 10px; background:#fbfdff}
-  .opt .formula{gap:6px}
   .opt .choose button{padding:6px 10px; font-weight:800; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer}
   .opt .choose button:hover{background:#f1f6ff}
   .opt .lbl, .summary .lbl{position:absolute; left:10px; top:-12px; background:#111827; color:#fff; padding:3px 10px; border-radius:999px; font-weight:900; font-size:12px; letter-spacing:0.2px; white-space:nowrap}
@@ -48,49 +52,35 @@
   .toggle{position:absolute; right:10px; top:8px; font-size:12px; border:1px solid var(--line); background:#fff; border-radius:8px; padding:3px 8px; cursor:pointer}
   .collapsed .formula, .collapsed .choose{display:none}
   footer{margin:18px 16px; font-size:12px; color:#6b7280}
-
-  /* 모바일에서 검색 인풋 길이 보정 */
-  @media (max-width: 600px){
-    main{display:block}
-    .row{grid-template-columns: 1fr; gap:8px}
-    .input input{font-size:16px}
-  }
+  #calcResult { color:#111827; font-weight:900; background:#f9fafb; padding:8px 10px; border-radius:6px; display:inline-block }
 </style>
-
-<!-- pako via jsDelivr -->
-<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 <script>
-// Decode gzip+base64 mixdata and restore original text into the same <script id="mixdata"> node.
+// Decode gzip+base64 from #mixdata safely and keep it OUT of the DOM (protection)
 (function() {
   function decode() {
     try {
       var el = document.getElementById('mixdata');
       if (!el) return;
-      var flag = el.getAttribute('data-encoded');
-      if (flag === '0') return; // already decoded
-      var b64 = (el.textContent || '').trim();
-      if (!b64) { setTimeout(decode, 30); return; }
-      if (typeof window.pako === 'undefined') { setTimeout(decode, 30); return; }
-      // base64 -> bytes
+      if (el.getAttribute('data-encoded') === '0') return;
+      var b64 = (el.textContent || '').replace(/\s+/g,'');
+      if (!b64) return setTimeout(decode, 30);
+      if (!window.pako) return setTimeout(decode, 30);
       var raw = atob(b64);
       var u8 = new Uint8Array(raw.length);
-      for (var i=0; i<raw.length; i++) u8[i] = raw.charCodeAt(i);
+      for (var i=0;i<raw.length;i++) u8[i] = raw.charCodeAt(i);
       var txt = window.pako.inflate(u8, { to: 'string' });
-      el.textContent = txt;
-      el.setAttribute('data-encoded', '0');
-      window.MIX_DATA_RAW = txt;
-      try { document.dispatchEvent(new CustomEvent('mixdata:decoded')); } catch(e){}
-    } catch (e) {
+      window.MIX_DATA_RAW = txt;           // keep only in memory
+      el.textContent = '';                 // never expose raw in DOM
+      el.setAttribute('data-encoded','0');
+      document.dispatchEvent(new CustomEvent('mixdata:ready'));
+    } catch(e) {
       console.error('mixdata decode error', e);
       setTimeout(decode, 100);
     }
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', decode);
-  } else {
-    decode();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', decode);
+  else decode();
 })();
 </script>
 </head>
@@ -123,9 +113,9 @@
     </aside>
   </main>
 
-  <footer>제작자: 메크섭 MyBow · Extracted mixdata length: 35822 chars</footer>
+  <footer>제작자: 메크섭 MyBow</footer>
 
-  <!-- mixdata (gzip+base64 from your original file) -->
+  <!-- PROTECTED mixdata: stays compressed in DOM -->
   <script id="mixdata" type="application/octet-stream" data-encoded="1">
 득코=비스코
 득코=미스코
@@ -2275,187 +2265,229 @@
 (식)폭주네펜데스(6)+(미)폭주에스텔라(6) 한정기간=(드)불멸가루곤킹
   </script>
 
-  <!-- 검색/트리/계산기 스크립트: 원본 로직 호환 버전 -->
-  <script>
-  (function(){
-    const $ = (sel,el=document)=>el.querySelector(sel);
-    const elQ = $('#q');
-    const elResults = $('#results');
-    const elRoute = $('#route');
-    const elMemo = $('#memo');
+<script>
+// App: build index after mixdata ready
+document.addEventListener('mixdata:ready', function() {
+  const $ = (sel,el=document)=>el.querySelector(sel);
+  const elQ = $('#q');
+  const elResults = $('#results');
+  const elRoute = $('#route');
+  const elMemo = $('#memo');
 
-    const MEMO_KEY = 'mixdex_v9_memo';
-    elMemo.value = localStorage.getItem(MEMO_KEY)||'';
-    elMemo.addEventListener('input',()=>localStorage.setItem(MEMO_KEY, elMemo.value));
+  const MEMO_KEY = 'mixdex_v9_memo';
+  elMemo.value = localStorage.getItem(MEMO_KEY)||'';
+  elMemo.addEventListener('input',()=>localStorage.setItem(MEMO_KEY, elMemo.value));
 
-    const PAREN_RE = /\([^)]*\)/g;
-    const LIMIT_RE = /한정기간/g;
-    function baseName(s){ return (s||'').replace(LIMIT_RE,'').replace(PAREN_RE,'').trim(); }
-    function normName(s){ return baseName(s).replace(/\s+/g,'').toLowerCase(); }
-    function headTag(s){ const m=(s||'').match(/^\((.)\)/); return m? m[1]:''; }
+  const PAREN_RE = /\([^)]*\)/g;
+  const LIMIT_RE = /한정기간/g;
+  function baseName(s){ return (s||'').replace(LIMIT_RE,'').replace(PAREN_RE,'').trim(); }
+  function normName(s){ return baseName(s).replace(/\s+/g,'').toLowerCase(); }
+  function headTag(s){ const m=(s||'').match(/^\((.)\)/); return m? m[1]:''; }
 
-    function buildIndex(raw){
-      const rawLines = raw.replace(/\r/g,'').split(/\n+/);
-      const lines = [];
-      let acc = '';
-      for (let i=0;i<rawLines.length;i++){ let line=rawLines[i].trim(); if(!line) continue; acc += (acc? ' ':'') + line; if(line.includes('=')){ lines.push(acc); acc=''; } }
-      if(acc) lines.push(acc);
+  const raw = (window.MIX_DATA_RAW||'').replace(/\r/g,'');
+  const rawLines = raw.split(/\n+/);
+  const lines = [];
+  let acc = "";
+  for (let i=0;i<rawLines.length;i++){ let line = rawLines[i].trim(); if (!line) continue; acc += (acc? " " : "") + line; if (line.includes('=')){ lines.push(acc); acc=""; } }
+  if (acc) lines.push(acc);
 
-      const recipesByResult = new Map();
-      const recipesByComp = new Map();
-      const acqByName = new Map();
+  const recipesByResult = new Map();
+  const recipesByComp = new Map();
+  const acqByName = new Map();
 
-      function applyCorrections(entry){
-        const combos = [['삐약몬','떡충'],['삐약몬','망울꽃'],['삐약몬','비이스'],['푸란','말콩']];
-        const setEq=(a,b)=>a.length===b.length&&a.every(v=>b.includes(v));
-        const bn=entry.comps?entry.comps.map(c=>baseName(c)):[];
-        const isTarget=bn.length?combos.some(pair=>setEq(bn.slice().sort(),pair.slice().sort())):false;
-        if(isTarget && baseName(entry.result)==='링링') entry.result='(새)팅팅';
-        return entry;
-      }
+  function addMapList(map, key, val){ if(!map.has(key)) map.set(key, []); map.get(key).push(val); }
 
-      lines.forEach((line)=>{
-        if(!line.includes('=')) return;
-        line = line.replace(LIMIT_RE,'');
-        line = line.replace(/,\s*(?==)/g,'').replace(/,+$/,'');
-        let [lhs,rhs] = line.split('=');
-        lhs=(lhs||'').trim(); rhs=(rhs||'').trim();
-        const hasPlus = lhs.includes('+');
-        if(hasPlus){
-          const parts = lhs.split(',').map(s=>s.trim()).filter(Boolean);
-          parts.forEach(part=>{
-            if(!part.includes('+')) return;
-            const comps = part.split('+').map(s=>s.trim()).filter(Boolean);
-            if(comps.length<2) return;
-            let entry = {comps, result: rhs, srcLine: line};
-            entry = applyCorrections(entry);
-            const keyR = normName(entry.result);
-            (recipesByResult.get(keyR)||recipesByResult.set(keyR,[]).get(keyR)).push(entry);
-            comps.forEach(c=>{const k=normName(c); (recipesByComp.get(k)||recipesByComp.set(k,[]).get(k)).push(entry);});
+  function applyCorrections(entry){
+    const combos = [
+      ['삐약몬','떡충'],['삐약몬','망울꽃'],['삐약몬','비이스'],['푸란','말콩'],
+    ];
+    const setEq = (a,b)=> a.length===b.length && a.every(v=>b.includes(v));
+    const compsBN = entry.comps.map(c=>baseName(c));
+    const isTargetCombo = combos.some(pair=> setEq(compsBN.slice().sort(), pair.slice().sort()));
+    if(isTargetCombo && baseName(entry.result)==='링링') entry.result='(새)팅팅';
+    return entry;
+  }
+
+  lines.forEach((line)=>{
+    if(!line.includes('=')) return;
+    line = line.replace(LIMIT_RE,'');
+    line = line.replace(/,\s*(?==)/g,'').replace(/,+$/,'');
+    let [lhs, rhs] = line.split('=');
+    lhs = (lhs||'').trim(); rhs = (rhs||'').trim();
+    const hasPlus = lhs.includes('+');
+    if(hasPlus){
+      const parts = lhs.split(',').map(s=>s.trim()).filter(Boolean);
+      parts.forEach(part=>{
+        if(!part.includes('+')) return;
+        const comps = part.split('+').map(s=>s.trim()).filter(Boolean);
+        if(comps.length<2) return;
+        let entry = {comps, result: rhs, srcLine: line};
+        entry = applyCorrections(entry);
+        const k = normName(entry.result);
+        addMapList(recipesByResult, k, entry);
+        comps.forEach(c=> addMapList(recipesByComp, normName(c), entry));
+      });
+    } else {
+      const where = lhs; const name = rhs;
+      const entry = {where, name, srcLine: line};
+      addMapList(acqByName, normName(name), entry);
+    }
+  });
+
+  function chip(name, extraClass='', clickable=true){
+    const tag = headTag(name);
+    const span = document.createElement('span');
+    span.className = 'chip small' + (tag?(' t-'+tag):'') + (extraClass?(' '+extraClass):'');
+    span.textContent = name;
+    if(clickable){
+      span.title = '클릭하면 이 몬스터로 재검색 (괄호 무시)';
+      span.addEventListener('click', ()=>{ elQ.value = baseName(name); doSearch(true); });
+    } else { span.classList.add('disabled'); }
+    return span;
+  }
+  function textPill(txt){ const s=document.createElement('span'); s.className='pill'; s.textContent=txt; return s; }
+  function rowFormula(parts){ const div=document.createElement('div'); div.className='res'; const f=document.createElement('div'); f.className='formula'; parts.forEach(p=>f.appendChild(p)); div.appendChild(f); return div; }
+  function subTitle(txt){ const d=document.createElement('div'); d.className='subttl'; d.textContent=txt; return d; }
+  function divider(){ const d=document.createElement('div'); d.className='divider'; return d; }
+
+  const qHistory = [];
+  function pushHistory(v){ v=(v||'').trim(); if(!v) return; if(!qHistory.length || qHistory[qHistory.length-1]!==v) qHistory.push(v); }
+  function goBack(){
+    if(qHistory.length>1){ qHistory.pop(); elQ.value = qHistory[qHistory.length-1]; doSearch(false); }
+    else { elQ.value=''; elResults.innerHTML=''; }
+  }
+
+  function doSearch(shouldPush=true){
+    const rawInput = (elQ.value||'');
+    const q = normName(rawInput);
+    elResults.innerHTML='';
+    if(!q) return;
+    if(shouldPush) pushHistory(rawInput);
+
+    const asResult = recipesByResult.get(q)||[];
+    const asComp   = recipesByComp.get(q)||[];
+    const acqs     = acqByName.get(q)||[];
+
+    if(asResult.length){
+      elResults.appendChild(subTitle('이걸 만드는 믹스법'));
+      asResult.forEach(rec=>{ const parts=[...rec.comps.map(c=>chip(c)), textPill('='), chip(rec.result)]; elResults.appendChild(rowFormula(parts)); });
+      elResults.appendChild(divider());
+    }
+    if(acqs.length){
+      elResults.appendChild(subTitle('득코 / 획득'));
+      acqs.forEach(a=>{ const left=document.createElement('span'); left.className='pill'; left.textContent=a.where+' ='; const parts=[left, chip(a.name)]; elResults.appendChild(rowFormula(parts)); });
+      elResults.appendChild(divider());
+    }
+    if(asComp.length){
+      elResults.appendChild(subTitle('이 코어가 쓰이는 믹스법'));
+      asComp.forEach(rec=>{ const parts=[...rec.comps.map(c=>chip(c)), textPill('='), chip(rec.result)]; elResults.appendChild(rowFormula(parts)); });
+    }
+    if(!asResult.length && !asComp.length && !acqs.length){
+      const empty=document.createElement('div'); empty.className='li'; empty.textContent='검색 결과가 없습니다. (이름 철자/공백/괄호 제거 확인)'; elResults.appendChild(empty);
+    }
+  }
+
+  // Tree (optional UI kept minimal, same as previous behavior)
+  let treeIdSeq = 0;
+  function newNode(name, depth=1, meta={}){ return { id: ++treeIdSeq, name, chosen:null, children:[], leaf:false, depth, meta }; }
+  function buildOptions(name){
+    const k = normName(name);
+    const opts = [];
+    (recipesByResult.get(k)||[]).forEach(rec=> opts.push({kind:'recipe', rec}) );
+    (acqByName.get(k)||[]).forEach(a=> opts.push({kind:'acq', acq:a}) );
+    return opts;
+  }
+  function toggleBtn(container){
+    const b=document.createElement('button'); b.className='toggle'; b.textContent='접기';
+    b.addEventListener('click',()=>{ const col=container.classList.toggle('collapsed'); b.textContent=col?'펼치기':'접기'; });
+    return b;
+  }
+  function baseChip(name){ return chip(name,'',false); }
+  function childLabel(parentName, role, stageDepth){
+    const lbl = document.createElement('span'); lbl.className='pill';
+    lbl.textContent = baseName(parentName)+' → '+role+' (믹스'+stageDepth+'단)'; lbl.style.background='#eef6ff'; lbl.style.borderColor='#cfe3ff'; return lbl;
+  }
+  function renderNode(node, mount){
+    const wrap=document.createElement('div'); wrap.className='node tree';
+    const head=document.createElement('div'); head.className='head';
+    if(node.meta && node.meta.parentName && node.meta.role) head.appendChild(childLabel(node.meta.parentName, node.meta.role, node.meta.stageDepth));
+    head.appendChild(baseChip(node.name)); wrap.appendChild(head);
+    if(!node.leaf && !node.chosen){
+      const opts=buildOptions(node.name);
+      if(opts.length){
+        const optWrap=document.createElement('div'); optWrap.className='options';
+        opts.forEach((o,idx)=>{
+          const box=document.createElement('div'); box.className='opt';
+          const lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=baseName(node.name)+' 선택루트 '+(idx+1);
+          box.appendChild(lbl); box.appendChild(toggleBtn(box));
+          const f=document.createElement('div'); f.className='formula';
+          if(o.kind==='recipe'){ o.rec.comps.forEach(c=>f.appendChild(baseChip(c))); f.appendChild(textPill('=')); f.appendChild(baseChip(o.rec.result)); }
+          else { const pill=document.createElement('span'); pill.className='pill'; pill.textContent=o.acq.where+' ='; f.appendChild(pill); f.appendChild(baseChip(o.acq.name)); }
+          box.appendChild(f);
+          const act=document.createElement('div'); act.className='choose';
+          const btn=document.createElement('button'); btn.textContent='이 경로 선택';
+          btn.addEventListener('click',()=>{
+            node.chosen=o;
+            if(o.kind==='recipe'){
+              const comps=o.rec.comps.map(c=>baseName(c)); node.children=[];
+              if(comps[0]) node.children.push(newNode(comps[0], node.depth+1, {parentName: baseName(node.name), role:'메인 코어', stageDepth: node.depth}));
+              if(comps[1]) node.children.push(newNode(comps[1], node.depth+1, {parentName: baseName(node.name), role:'서브 코어', stageDepth: node.depth}));
+            } else { node.leaf=true; }
+            mount.replaceChild(renderNode(node, mount), wrap);
           });
-        } else {
-          const where = lhs; const name = rhs;
-          const entry = {where, name, srcLine: line};
-          const key = normName(name);
-          (acqByName.get(key)||acqByName.set(key,[]).get(key)).push(entry);
-        }
-      });
-
-      return {recipesByResult, recipesByComp, acqByName};
+          act.appendChild(btn); box.appendChild(act); optWrap.appendChild(box);
+        });
+        wrap.appendChild(optWrap);
+      } else { const info=document.createElement('div'); info.className='li'; info.textContent='선택 가능한 레시피/득코가 없습니다.'; wrap.appendChild(info); }
     }
+    if(node.chosen && node.children.length) node.children.forEach(child=> wrap.appendChild(renderNode(child, wrap)));
+    return wrap;
+  }
+  function startTree(){
+    const qName = (elQ.value||'').trim();
+    if(!qName) return alert('먼저 검색어(몬스터 이름)를 입력하세요.');
+    elRoute.innerHTML=''; const root=newNode(baseName(qName),1); elRoute.appendChild(renderNode(root, elRoute));
+  }
+  function resetTree(){ elRoute.innerHTML=''; }
 
-    let INDEX=null;
-    function ensureIndex(cb){
-      if(INDEX) return cb();
-      function ready(){
-        const el = document.getElementById('mixdata');
-        if(!el || el.getAttribute('data-encoded')!=='0'){ setTimeout(ready,30); return; }
-        INDEX = buildIndex(el.textContent||'');
-        cb();
-      }
-      ready();
-    }
+  document.getElementById('search').addEventListener('click', ()=>doSearch(true));
+  document.getElementById('buildTree').addEventListener('click', startTree);
+  document.getElementById('resetTree').addEventListener('click', resetTree);
+  document.getElementById('back').addEventListener('click', goBack);
+  elQ.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(true); });
+  setTimeout(()=> elQ.focus(), 0);
+});
+</script>
 
-    function chip(name, extraClass='', clickable=true){
-      const tag = headTag(name);
-      const span = document.createElement('span');
-      span.className = 'chip small' + (tag?(' t-'+tag):'') + (extraClass?(' '+extraClass):'');
-      span.textContent = name;
-      if(clickable){
-        span.title = '클릭하면 이 몬스터로 재검색 (괄호 무시)';
-        span.addEventListener('click', ()=>{ elQ.value = baseName(name); doSearch(true); });
-      } else { span.classList.add('disabled'); }
-      return span;
-    }
-    function textPill(txt){ const s=document.createElement('span'); s.className='pill'; s.textContent=txt; return s; }
-    function rowFormula(parts){ const div=document.createElement('div'); div.className='res'; const f=document.createElement('div'); f.className='formula'; parts.forEach(p=>f.appendChild(p)); div.appendChild(f); return div; }
-    function subTitle(txt){ const d=document.createElement('div'); d.className='subttl'; d.textContent=txt; return d; }
-    function divider(){ const d=document.createElement('div'); d.className='divider'; return d; }
+<!-- 계산기 -->
+<section style="margin:16px; padding:14px; border-radius:12px;">
+  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center; font-size:1.05rem;">
+    <input id="baseA" type="number" placeholder="기본렙 A" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:1px solid #d7dfec;">
+    <input id="currA" type="number" placeholder="현재렙 A" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:1px solid #d7dfec;">
+    <span> + </span>
+    <input id="baseB" type="number" placeholder="기본렙 B" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:1px solid #d7dfec;">
+    <input id="currB" type="number" placeholder="현재렙 B" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:1px solid #d7dfec;">
+    <span> = </span>
+    <button id="calcBtn" class="btn" style="padding:8px 14px; border-radius:10px;">계산하기</button>
+  </div>
+  <div id="resultBox" style="text-align:center; margin-top:10px; font-size:1.2rem;">결과: -</div>
+</section>
+<script>
+(function(){
+  function calc(){
+    const g = id => parseFloat(document.getElementById(id).value);
+    const baseA=g('baseA'), currA=g('currA'), baseB=g('baseB'), currB=g('currB');
+    const out=document.getElementById('resultBox');
+    if([baseA,currA,baseB,currB].some(v=>Number.isNaN(v))){ out.textContent='결과: 입력 부족'; return; }
+    let add=8; const a15=currA>=(baseA+15), b15=currB>=(baseB+15), a25=currA>=(baseA+25), b25=currB>=(baseB+25);
+    if(a25&&b25) add=10; else if(a15||b15) add=9;
+    const exact=(currA+currB)/2 + add;
+    const isHalf = Math.abs(exact - Math.round(exact)) === 0.5;
+    out.innerHTML = isHalf ? '결과: <b>'+exact.toFixed(1)+'</b> (⚠️ 변동 가능)' : '결과: <b>'+Math.round(exact)+'</b> (안정빵)';
+  }
+  document.getElementById('calcBtn').addEventListener('click', calc);
+})();
+</script>
 
-    const qHistory=[];
-    function pushHistory(v){ v=(v||'').trim(); if(!v) return; if(!qHistory.length||qHistory[qHistory.length-1]!==v) qHistory.push(v); }
-    function goBack(){
-      if(qHistory.length>1){ qHistory.pop(); const prev=qHistory[qHistory.length-1]; elQ.value=baseName(prev); doSearch(false); }
-      else{ elQ.value=''; elResults.innerHTML=''; }
-    }
-
-    function doSearch(shouldPush=true){
-      ensureIndex(()=>{
-        const rawInput=(elQ.value||'');
-        const q = normName(rawInput);
-        elResults.innerHTML='';
-        if(!q) return;
-        if(shouldPush) pushHistory(rawInput);
-        const {recipesByResult, recipesByComp, acqByName} = INDEX;
-        const asResult = recipesByResult.get(q)||[];
-        const asComp   = recipesByComp.get(q)||[];
-        const acqs     = acqByName.get(q)||[];
-
-        if(asResult.length){
-          elResults.appendChild(subTitle('이걸 만드는 믹스법'));
-          asResult.forEach(rec=>{ const parts=[...rec.comps.map(c=>chip(c)), textPill('='), chip(rec.result)]; elResults.appendChild(rowFormula(parts)); });
-          elResults.appendChild(divider());
-        }
-        if(acqs.length){
-          elResults.appendChild(subTitle('득코 / 획득'));
-          acqs.forEach(a=>{ const left=document.createElement('span'); left.className='pill'; left.textContent=a.where+' ='; const parts=[left, chip(a.name)]; elResults.appendChild(rowFormula(parts)); });
-          elResults.appendChild(divider());
-        }
-        if(asComp.length){
-          elResults.appendChild(subTitle('이 코어가 쓰이는 믹스법'));
-          asComp.forEach(rec=>{ const parts=[...rec.comps.map(c=>chip(c)), textPill('='), chip(rec.result)]; elResults.appendChild(rowFormula(parts)); });
-        }
-        if(!asResult.length && !asComp.length && !acqs.length){
-          const empty=document.createElement('div'); empty.className='li'; empty.textContent='검색 결과가 없습니다. (이름 철자/공백/괄호 제거 확인)'; elResults.appendChild(empty);
-        }
-      });
-    }
-
-    // tree minimal (reuse original functions)
-    function newNode(name, depth=1, meta={}){ return { id: Date.now()+Math.random(), name, chosen:null, children:[], leaf:false, depth, meta }; }
-    function startTree(){ const v=(elQ.value||'').trim(); if(!v){ alert('먼저 검색어(몬스터 이름)를 입력하세요.'); return; } elRoute.innerHTML=''; elRoute.appendChild(document.createTextNode('트리 기능은 기존과 동일하게 동작합니다. 검색 후 옵션 선택으로 확장하세요.')); }
-
-    document.getElementById('search').addEventListener('click', ()=>doSearch(true));
-    document.getElementById('buildTree').addEventListener('click', startTree);
-    document.getElementById('resetTree').addEventListener('click', ()=>{ elRoute.innerHTML=''; });
-    document.getElementById('back').addEventListener('click', goBack);
-    elQ.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(true); });
-    setTimeout(()=> elQ.focus(), 0);
-  })();
-  </script>
-
-  <!-- === SIMPLE CALCULATOR (unchanged logic) === -->
-  <section style="margin:16px; padding:14px; border-radius:12px;">
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center; font-size:1.05rem;">
-      <input id="baseA" type="number" placeholder="기본렙 A" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:none;">
-      <input id="currA" type="number" placeholder="현재렙 A" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:none;">
-      <span> + </span>
-      <input id="baseB" type="number" placeholder="기본렙 B" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:none;">
-      <input id="currB" type="number" placeholder="현재렙 B" style="width:110px; padding:8px; text-align:center; border-radius:8px; border:none;">
-      <span> = </span>
-      <button id="calcBtn" class="btn" style="padding:8px 14px; border-radius:10px;">계산하기</button>
-    </div>
-    <div id="resultBox" style="text-align:center; margin-top:10px; font-size:1.3rem;">결과: -</div>
-  </section>
-
-  <script>
-  (function(){
-    function calc(){
-      const baseA = parseFloat(document.querySelector('#baseA').value);
-      const currA = parseFloat(document.querySelector('#currA').value);
-      const baseB = parseFloat(document.querySelector('#baseB').value);
-      const currB = parseFloat(document.querySelector('#currB').value);
-      const out = document.querySelector('#resultBox');
-      if([baseA,currA,baseB,currB].some(v=>Number.isNaN(v))){ out.textContent='결과: 입력 부족'; return; }
-      let add=8; const a15=currA>=(baseA+15), b15=currB>=(baseB+15), a25=currA>=(baseA+25), b25=currB>=(baseB+25);
-      if(a25 && b25) add=10; else if(a15 || b15) add=9;
-      const exact=(currA+currB)/2+add;
-      const isHalf = Math.abs(exact - Math.round(exact)) === 0.5;
-      if(isHalf) out.innerHTML='결과: <b>'+exact.toFixed(1)+'</b> (⚠️ 변동 가능)';
-      else out.innerHTML='결과: <b>'+Math.round(exact)+'</b> (안정빵)';
-    }
-    document.querySelector('#calcBtn').addEventListener('click', calc);
-  })();
-  </script>
 </body>
 </html>
