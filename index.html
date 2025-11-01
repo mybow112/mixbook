@@ -2736,13 +2736,15 @@ header .row .input input{
     }
     // 보정값: +10 (양쪽 기렙+25 이상) > +9 (한쪽 기렙+15 이상) > +8
     let add = 8;
-// 변경: 보정값 규칙을 기요(기본렙) 기준 +10/20 임계로 조정
-// +10 (양쪽 모두 기렙+20 이상), +9 (한쪽이라도 기렙+10 이상), 기본 +8
+// 보정값 규칙(슾뿌님 방식과 동일):
+// +10: 양쪽 모두 '현재레벨 ≥ 기렙+25' (만렙 혼합)
+// +9 : 둘 중 하나라도 '현재레벨 ≥ 기렙+10'
+// +8 : 그 외
 const a10 = currA >= (baseA + 10);
 const b10 = currB >= (baseB + 10);
-const a20 = currA >= (baseA + 20);
-const b20 = currB >= (baseB + 20);
-if (a20 && b20) add = 10;
+const a25 = currA >= (baseA + 25);
+const b25 = currB >= (baseB + 25);
+if (a25 && b25) add = 10;
 else if (a10 || b10) add = 9;
 
 const exact = (currA + currB)/2 + add;
